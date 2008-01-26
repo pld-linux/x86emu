@@ -1,0 +1,209 @@
+--- x86emu-0.8/scitech/src/v86bios/makefile.linux.orig	2001-08-14 19:35:05.000000000 +0200
++++ x86emu-0.8/scitech/src/v86bios/makefile.linux	2008-01-26 19:40:18.401120647 +0100
+@@ -1,10 +1,10 @@
+-CFLAGS=-g -I/usr/include -I../../include/ -O0 -Wall
++CFLAGS=$(OPT) -I/usr/include -I../../include/ -Wall
+ CC=gcc
+ 
+ .y.c:
+-    bison -d -o $@ $<
++	bison -d -o $@ $<
+ .l.c:
+-    flex -o$@ $< 
++	flex -o$@ $< 
+ 
+ SRCS = main.c io.c x86emu.c int.c pci.c
+ OBJS = main.o io.o x86emu.o int.o pci.o
+@@ -27,33 +27,33 @@ lex.o : lex.c
+ v86bios.o: v86bios.c v86bios.h pci.h debug.h
+ logging.o: logging.c v86bios.h
+ x86emu.o : x86emu.c v86bios.h debug.h
+-    $(CC) -c -DX86EMU $(CFLAGS) $*.c
++	$(CC) -c -DX86EMU $(CFLAGS) $*.c
+ 
+-vbios.x86emu : main.o x86emu.o io.o int.o pci.o console.o mem.o logging.o
+-    gcc -Wl,-defsym -Wl,printk=lprintf -o vbios.x86emu main.o \
+-    x86emu.o io.o int.o pci.o console.o mem.o logging.o \
+-    -L../x86emu -lx86emud -lc 
+-vbios.vm86 : main.o v86.o io.o int.o pci.o console.o logging.o
+-    gcc -o vbios.vm86 main.o v86.o io.o int.o pci.o console.o \
+-    logging.o -lc 
+-cbios.x86emu : cbios.o x86emu.o io.o int.o pci.o console.o mem.o logging.o
+-    gcc -Wl,-defsym -Wl,printk=lprintf -o cbios.x86emu cbios.o \
+-    x86emu.o io.o int.o pci.o console.o mem.o logging.o \
+-    -L../x86emu -lx86emud -lc 
+-cbios.vm86 : cbios.o v86.o io.o int.o pci.o console.o logging.o
+-    gcc -o cbios.vm86 cbios.o v86.o io.o int.o pci.o console.o \
+-    logging.o -lc 
++vbios.x86emu : main.o x86emu.o io.o int.o pci.o console.o mem.o
++	$(CC) -Wl,-defsym -Wl,printk=lprintf -o vbios.x86emu main.o \
++	x86emu.o io.o int.o pci.o console.o mem.o \
++	-L../x86emu -lx86emud -lc 
++vbios.vm86 : main.o v86.o io.o int.o pci.o console.o
++	$(CC) -o vbios.vm86 main.o v86.o io.o int.o pci.o console.o \
++	-lc 
++cbios.x86emu : cbios.o x86emu.o io.o int.o pci.o console.o mem.o
++	$(CC) -Wl,-defsym -Wl,printk=lprintf -o cbios.x86emu cbios.o \
++	x86emu.o io.o int.o pci.o console.o mem.o \
++	-L../x86emu -lx86emud -lc 
++cbios.vm86 : cbios.o v86.o io.o int.o pci.o console.o
++	$(CC) -o cbios.vm86 cbios.o v86.o io.o int.o pci.o console.o \
++	-lc 
+ v86bios.vm86: command.o parser.o lex.o v86bios.o v86.o io.o int.o pci.o console.o logging.o
+-     gcc -o v86bios.vm86 command.o parser.o lex.o v86bios.o v86.o io.o \
+-     int.o pci.o console.o logging.o -L/usr/lib/curses -lfl \
+-     -lreadline -lc -lncurses /usr/lib/libc.a
++	$(CC) -o v86bios.vm86 command.o parser.o lex.o v86bios.o v86.o io.o \
++	int.o pci.o console.o logging.o -lfl \
++	-lreadline -lc -lncurses
+ v86bios.x86emu: command.o parser.o lex.o v86bios.o x86emu.o io.o int.o pci.o console.o logging.o
+-    gcc -Wl,-defsym -Wl,printk=lprintf -o v86bios.x86emu \
+-    command.o parser.o lex.o v86bios.o x86emu.o io.o \
+-    int.o pci.o console.o logging.o -L/usr/lib/curses -lfl \
+-    -lreadline -lc -lncurses  /usr/lib/libc.a -L../x86emu -lx86emud
++	$(CC) -Wl,-defsym -Wl,printk=lprintf -o v86bios.x86emu \
++	command.o parser.o lex.o v86bios.o x86emu.o io.o \
++	int.o pci.o console.o logging.o -lfl \
++	-lreadline -lc -lncurses  -L../x86emu -lx86emud
+ 
+ clean:
+-    rm -f *.o vbios.x86emu vbios.vm86 cbios.x86emu cbios.vm86 parser.c \
+-    lex.c parser.h v86bios.x86emu v86bios.vm86
++	rm -f *.o vbios.x86emu vbios.vm86 cbios.x86emu cbios.vm86 parser.c \
++	lex.c parser.h v86bios.x86emu v86bios.vm86
+ 
+--- x86emu-0.8/scitech/src/v86bios/v86.c.orig	2001-08-14 19:35:05.000000000 +0200
++++ x86emu-0.8/scitech/src/v86bios/v86.c	2008-01-26 19:32:12.353422367 +0100
+@@ -41,7 +41,7 @@ static void dump_registers(void);
+ static void stack_trace(void);
+ static int vm86_rep(struct vm86_struct *ptr);
+ 
+-#define CPU_REG(x) (vm86s.regs.##x)
++#define CPU_REG(x) (vm86s.regs.x)
+ #define CPU_REG_LW(reg)      (*((CARD16 *)&CPU_REG(reg)))
+ #define CPU_REG_HW(reg)      (*((CARD16 *)&CPU_REG(reg) + 1))
+ #define CPU_REG_LB(reg)      (*(CARD8 *)&CPU_REG(e##reg))
+@@ -194,6 +194,7 @@ do_x86(unsigned long bios_start, i86bios
+ #define LIN_PREF_SI  ((pref_seg << 4) + CPU_REG_LW(esi))
+ 
+ #define LWECX       (prefix66 ^ prefix67 ? CPU_REG(ecx) : CPU_REG_LW(ecx))
++#define LWECX_L     (*(CARD32 *)(prefix66 ^ prefix67 ? &CPU_REG(ecx) : &CPU_REG_LW(ecx)))
+ 
+ static int
+ vm86_GP_fault(void)
+@@ -245,7 +246,7 @@ vm86_GP_fault(void)
+                                         SEG_ADR((CARD8 *),es,di),
+                                         CPU_REG_LW(eflags)&DF,
+                                         (is_rep? LWECX:1));
+-        if (is_rep) LWECX = 0;
++        if (is_rep) LWECX_L = 0;
+         CPU_REG_LW(eip)++;
+         break;
+ 
+@@ -264,7 +265,7 @@ vm86_GP_fault(void)
+                                             CPU_REG_LW(eflags)&DF,
+                                             (is_rep? LWECX:1));
+         }
+-        if (is_rep) LWECX = 0;
++        if (is_rep) LWECX_L = 0;
+         CPU_REG_LW(eip)++;
+         break;
+ 
+@@ -274,7 +275,7 @@ vm86_GP_fault(void)
+         CPU_REG_LW(esi) += port_rep_outb(CPU_REG_LW(edx),(CARD8*)LIN_PREF_SI,
+                                          CPU_REG_LW(eflags)&DF,
+                                          (is_rep? LWECX:1));
+-        if (is_rep) LWECX = 0;
++        if (is_rep) LWECX_L = 0;
+         CPU_REG_LW(eip)++;
+         break;
+ 
+@@ -293,7 +294,7 @@ vm86_GP_fault(void)
+                                              CPU_REG_LW(eflags)&DF,
+                                              (is_rep? LWECX:1));
+         } 
+-        if (is_rep) LWECX = 0;
++        if (is_rep) LWECX_L = 0;
+         CPU_REG_LW(eip)++;
+         break;
+ 
+@@ -376,8 +377,8 @@ vm86_do_int(int num)
+     /* try to run bios interrupt */
+     
+     /* if not installed fall back */
+-#define COPY(x) regs.##x = CPU_REG(x)
+-#define COPY_R(x) CPU_REG(x) = regs.##x
++#define COPY(x) regs.x = CPU_REG(x)
++#define COPY_R(x) CPU_REG(x) = regs.x
+     
+     COPY(eax);
+     COPY(ebx);
+--- x86emu-0.8/scitech/src/v86bios/int.c.orig	2001-08-14 19:35:05.000000000 +0200
++++ x86emu-0.8/scitech/src/v86bios/int.c	2008-01-26 19:33:01.516223995 +0100
+@@ -79,6 +79,7 @@ int42_handler(int num,struct regs86 *reg
+             outb(0x3c2,c);
+             return 1;
+         default:
++	    ;
+         }
+     }
+     if (num == 0x42)
+--- x86emu-0.8/scitech/src/v86bios/x86emu.c.orig	2001-08-14 19:35:05.000000000 +0200
++++ x86emu-0.8/scitech/src/v86bios/x86emu.c	2008-01-26 19:37:05.146107672 +0100
+@@ -297,9 +297,9 @@ getIntVect(int num)
+ {
+   return ((CARD32*)0)[num];
+ }
+-#if 0
++#if 1
+ void
+-printk(const char *fmt, ...)
++lprintf(const char *fmt, ...)
+ {
+     va_list argptr;
+     va_start(argptr, fmt);
+--- x86emu-0.8/scitech/src/x86emu/makefile.linux.orig	2001-08-14 19:35:06.000000000 +0200
++++ x86emu-0.8/scitech/src/x86emu/makefile.linux	2008-01-26 19:18:58.212166836 +0100
+@@ -39,7 +39,7 @@ fpu.o \
+ ops.o \
+ ops2.o \
+ prim_ops.o \
+-pregs.o \
++debug.o \
+ sys.o
+ 
+ DEBUGOBJS=debug.d \
+@@ -48,7 +48,6 @@ DEBUGOBJS=debug.d \
+ 	  ops.d \
+ 	  ops2.d \
+ 	  prim_ops.d \
+-	  pregs.d \
+ 	  sys.d
+ 
+ .SUFFIXES: .d
+@@ -62,20 +61,20 @@ $(TARGETDEBUGLIB): $(DEBUGOBJS)
+ 	ar rv $(TARGETDEBUGLIB) $(DEBUGOBJS)
+ 
+ INCS   = -I. -Ix86emu -I../../include
+-CFLAGS = -D__DRIVER__ -DFORCE_POST -D_CEXPORT= -DNO_LONG_LONG
++CFLAGS = -D__DRIVER__ -DFORCE_POST -D_CEXPORT= -DNO_LONG_LONG $(OPT)
+ CDEBUGFLAGS = -DDEBUG
+ 
+ .c.o:
+-	gcc -g -O -Wall -c $(CFLAGS) $(INCS) $*.c
++	$(CC) -Wall -c $(CFLAGS) $(INCS) $*.c
+ 
+ .c.d:
+-	gcc -g -O -Wall -c -o$*.d $(CFLAGS) $(CDEBUGFLAGS) $(INCS) $*.c
++	$(CC) -Wall -c -o$*.d $(CFLAGS) $(CDEBUGFLAGS) $(INCS) $*.c
+ 
+ .cpp.o:
+-	gcc -c $(CFLAGS) $(INCS) $*.cpp
++	$(CC) -c $(CFLAGS) $(INCS) $*.cpp
+ 
+ clean:
+ 	rm -f *.a *.o *.d
+ 
+ validate:	validate.o libx86emu.a
+-	gcc -o validate validate.o -lx86emu -L.
++	$(CC) -o validate validate.o -lx86emu -L.
