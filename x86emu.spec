@@ -2,7 +2,7 @@ Summary:	Intel x86 CPU real mode emulator
 Summary(pl.UTF-8):	Emulator trybu rzeczywistego procesorów Intel x86
 Name:		x86emu
 Version:	0.8
-Release:	1
+Release:	1.1
 License:	MIT
 Group:		Libraries
 Source0:	http://www.scitechsoft.com/ftp/devel/obsolete/x86emu/%{name}-%{version}.tar.gz
@@ -56,10 +56,12 @@ Pliki nagłówkowe i biblioteka statyczna x86emu.
 	CC="%{__cc}" \
 	OPT="%{rpmcflags}"
 
+%ifnarch ppc powerpc
 # actually not packaged, but build to check if library is usable
 %{__make} -C scitech/src/v86bios -f makefile.linux vbios.x86emu cbios.x86emu \
 	CC="%{__cc}" \
 	OPT="%{rpmcflags}"
+%endif
 
 %install
 rm -rf $RPM_BUILD_ROOT
