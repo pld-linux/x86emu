@@ -56,7 +56,8 @@ Pliki nagłówkowe i biblioteka statyczna x86emu.
 	CC="%{__cc}" \
 	OPT="%{rpmcflags}"
 
-%ifnarch ppc powerpc
+# only partially multi-arch, some pieces look like x86-only
+%ifarch %{ix86} %{x8664}
 # actually not packaged, but build to check if library is usable
 %{__make} -C scitech/src/v86bios -f makefile.linux vbios.x86emu cbios.x86emu \
 	CC="%{__cc}" \
