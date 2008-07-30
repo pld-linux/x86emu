@@ -164,7 +164,7 @@
  /*--------------------- type definitions -----------------------------------*/
  
 --- x86emu-0.8/scitech/src/x86emu/x86emu/prim_ops.h.orig	2001-08-14 19:35:06.000000000 +0200
-+++ x86emu-0.8/scitech/src/x86emu/x86emu/prim_ops.h	2008-01-26 20:07:16.297319297 +0100
++++ x86emu-0.8/scitech/src/x86emu/x86emu/prim_ops.h	2008-07-30 19:07:20.617332179 +0200
 @@ -39,8 +39,6 @@
  #ifndef __X86EMU_PRIM_OPS_H
  #define __X86EMU_PRIM_OPS_H
@@ -174,9 +174,11 @@
  #ifdef  __cplusplus
  extern "C" {            			/* Use "C" linkage when in C++ mode */
  #endif
-@@ -136,7 +134,7 @@ void    push_long (u32 w);
+@@ -135,8 +133,9 @@
+ void    push_long (u32 w);
  u16     pop_word (void);
  u32		pop_long (void);
++void    cpuid (void);
  
 -#if  defined(__HAVE_INLINE_ASSEMBLER__) && !defined(PRIM_OPS_NO_REDEFINE_ASM)
 +#if  0
@@ -2946,8 +2948,21 @@
          case 3:
              DECODE_PRINTF("CALL\tFAR ");
 --- x86emu-0.8/scitech/src/x86emu/ops2.c.orig	2001-08-14 19:35:06.000000000 +0200
-+++ x86emu-0.8/scitech/src/x86emu/ops2.c	2008-01-26 20:43:42.049878237 +0100
-@@ -49,7 +49,7 @@ op1 - Instruction op code
++++ x86emu-0.8/scitech/src/x86emu/ops2.c	2008-07-30 19:09:31.329341398 +0200
+@@ -40,6 +40,12 @@
+ 
+ #include "x86emu/x86emui.h"
+ 
++#undef bswap_32
++#define bswap_32(x) (((x & 0xff000000) >> 24) | \
++		     ((x & 0x00ff0000) >> 8) | \
++		     ((x & 0x0000ff00) << 8) | \
++		     ((x & 0x000000ff) << 24))
++
+ /*----------------------------- Implementation ----------------------------*/
+ 
+ /****************************************************************************
+@@ -49,7 +55,7 @@
  REMARKS:
  Handles illegal opcodes.
  ****************************************************************************/
@@ -2956,7 +2971,7 @@
  	u8 op2)
  {
  	START_OF_INSTR();
-@@ -65,9 +65,43 @@ void x86emuOp2_illegal_op(
+@@ -65,9 +71,43 @@
  
  /****************************************************************************
  REMARKS:
@@ -3001,7 +3016,7 @@
  {
      s32 target;
      char *name = 0;
-@@ -130,7 +164,7 @@ void x86emuOp2_long_jump(u8 op2)
+@@ -130,7 +170,7 @@
          break;
        case 0x8d:
          name = "JNL\t";
@@ -3010,7 +3025,7 @@
          break;
        case 0x8e:
          name = "JLE\t";
-@@ -158,7 +192,7 @@ void x86emuOp2_long_jump(u8 op2)
+@@ -158,7 +198,7 @@
  REMARKS:
  Handles opcode 0x0f,0x90-0x9F
  ****************************************************************************/
@@ -3019,7 +3034,7 @@
  {
      int mod, rl, rh;
      uint destoffset;
-@@ -267,7 +301,7 @@ void x86emuOp2_set_byte(u8 op2)
+@@ -267,7 +307,7 @@
  REMARKS:
  Handles opcode 0x0f,0xa0
  ****************************************************************************/
@@ -3028,7 +3043,7 @@
  {
      START_OF_INSTR();
      DECODE_PRINTF("PUSH\tFS\n");
-@@ -281,7 +315,7 @@ void x86emuOp2_push_FS(u8 X86EMU_UNUSED(
+@@ -281,7 +321,7 @@
  REMARKS:
  Handles opcode 0x0f,0xa1
  ****************************************************************************/
@@ -3037,7 +3052,24 @@
  {
      START_OF_INSTR();
      DECODE_PRINTF("POP\tFS\n");
-@@ -295,7 +329,7 @@ void x86emuOp2_pop_FS(u8 X86EMU_UNUSED(o
+@@ -292,10 +332,24 @@
+ }
+ 
+ /****************************************************************************
++REMARKS: CPUID takes EAX/ECX as inputs, writes EAX/EBX/ECX/EDX as output
++Handles opcode 0x0f,0xa2
++****************************************************************************/
++static void x86emuOp2_cpuid(u8 X86EMU_UNUSED(op2))
++{
++    START_OF_INSTR();
++    DECODE_PRINTF("CPUID\n");
++    TRACE_AND_STEP();
++    cpuid();
++    DECODE_CLEAR_SEGOVR();
++    END_OF_INSTR();
++}
++
++/****************************************************************************
  REMARKS:
  Handles opcode 0x0f,0xa3
  ****************************************************************************/
@@ -3046,7 +3078,7 @@
  {
      int mod, rl, rh;
      uint srcoffset;
-@@ -416,7 +450,7 @@ void x86emuOp2_bt_R(u8 X86EMU_UNUSED(op2
+@@ -416,7 +470,7 @@
  REMARKS:
  Handles opcode 0x0f,0xa4
  ****************************************************************************/
@@ -3055,7 +3087,7 @@
  {
      int mod, rl, rh;
      uint destoffset;
-@@ -553,7 +587,7 @@ void x86emuOp2_shld_IMM(u8 X86EMU_UNUSED
+@@ -553,7 +607,7 @@
  REMARKS:
  Handles opcode 0x0f,0xa5
  ****************************************************************************/
@@ -3064,7 +3096,7 @@
  {
      int mod, rl, rh;
      uint destoffset;
-@@ -673,7 +707,7 @@ void x86emuOp2_shld_CL(u8 X86EMU_UNUSED(
+@@ -673,7 +727,7 @@
  REMARKS:
  Handles opcode 0x0f,0xa8
  ****************************************************************************/
@@ -3073,7 +3105,7 @@
  {
      START_OF_INSTR();
      DECODE_PRINTF("PUSH\tGS\n");
-@@ -687,7 +721,7 @@ void x86emuOp2_push_GS(u8 X86EMU_UNUSED(
+@@ -687,7 +741,7 @@
  REMARKS:
  Handles opcode 0x0f,0xa9
  ****************************************************************************/
@@ -3082,7 +3114,7 @@
  {
      START_OF_INSTR();
      DECODE_PRINTF("POP\tGS\n");
-@@ -699,9 +733,9 @@ void x86emuOp2_pop_GS(u8 X86EMU_UNUSED(o
+@@ -699,9 +753,9 @@
  
  /****************************************************************************
  REMARKS:
@@ -3094,7 +3126,7 @@
  {
      int mod, rl, rh;
      uint srcoffset;
-@@ -840,7 +874,7 @@ void x86emuOp2_bts_R(u8 X86EMU_UNUSED(op
+@@ -840,7 +894,7 @@
  REMARKS:
  Handles opcode 0x0f,0xac
  ****************************************************************************/
@@ -3103,7 +3135,7 @@
  {
      int mod, rl, rh;
      uint destoffset;
-@@ -977,7 +1011,7 @@ void x86emuOp2_shrd_IMM(u8 X86EMU_UNUSED
+@@ -977,7 +1031,7 @@
  REMARKS:
  Handles opcode 0x0f,0xad
  ****************************************************************************/
@@ -3112,7 +3144,7 @@
  {
      int mod, rl, rh;
      uint destoffset;
-@@ -1097,7 +1131,7 @@ void x86emuOp2_shrd_CL(u8 X86EMU_UNUSED(
+@@ -1097,7 +1151,7 @@
  REMARKS:
  Handles opcode 0x0f,0xaf
  ****************************************************************************/
@@ -3121,7 +3153,7 @@
  {
      int mod, rl, rh;
      uint srcoffset;
-@@ -1274,7 +1308,7 @@ void x86emuOp2_imul_R_RM(u8 X86EMU_UNUSE
+@@ -1274,7 +1328,7 @@
  REMARKS:
  Handles opcode 0x0f,0xb2
  ****************************************************************************/
@@ -3130,7 +3162,7 @@
  {
  	int mod, rh, rl;
      u16 *dstreg;
-@@ -1323,7 +1357,7 @@ void x86emuOp2_lss_R_IMM(u8 X86EMU_UNUSE
+@@ -1323,7 +1377,7 @@
  REMARKS:
  Handles opcode 0x0f,0xb3
  ****************************************************************************/
@@ -3139,7 +3171,7 @@
  {
  	int mod, rl, rh;
  	uint srcoffset;
-@@ -1462,7 +1496,7 @@ void x86emuOp2_btr_R(u8 X86EMU_UNUSED(op
+@@ -1462,7 +1516,7 @@
  REMARKS:
  Handles opcode 0x0f,0xb4
  ****************************************************************************/
@@ -3148,7 +3180,7 @@
  {
  	int mod, rh, rl;
      u16 *dstreg;
-@@ -1511,7 +1545,7 @@ void x86emuOp2_lfs_R_IMM(u8 X86EMU_UNUSE
+@@ -1511,7 +1565,7 @@
  REMARKS:
  Handles opcode 0x0f,0xb5
  ****************************************************************************/
@@ -3157,7 +3189,7 @@
  {
  	int mod, rh, rl;
      u16 *dstreg;
-@@ -1560,7 +1594,7 @@ void x86emuOp2_lgs_R_IMM(u8 X86EMU_UNUSE
+@@ -1560,7 +1614,7 @@
  REMARKS:
  Handles opcode 0x0f,0xb6
  ****************************************************************************/
@@ -3166,7 +3198,7 @@
  {
      int mod, rl, rh;
      uint srcoffset;
-@@ -1676,7 +1710,7 @@ void x86emuOp2_movzx_byte_R_RM(u8 X86EMU
+@@ -1676,7 +1730,7 @@
  REMARKS:
  Handles opcode 0x0f,0xb7
  ****************************************************************************/
@@ -3175,7 +3207,7 @@
  {
      int mod, rl, rh;
      uint srcoffset;
-@@ -1732,7 +1766,7 @@ void x86emuOp2_movzx_word_R_RM(u8 X86EMU
+@@ -1732,7 +1786,7 @@
  REMARKS:
  Handles opcode 0x0f,0xba
  ****************************************************************************/
@@ -3184,7 +3216,7 @@
  {
      int mod, rl, rh;
      uint srcoffset;
-@@ -1741,16 +1775,16 @@ void x86emuOp2_btX_I(u8 X86EMU_UNUSED(op
+@@ -1741,16 +1795,16 @@
      START_OF_INSTR();
      FETCH_DECODE_MODRM(mod, rh, rl);
      switch (rh) {
@@ -3205,7 +3237,7 @@
          DECODE_PRINTF("BTC\t");
          break;
      default:
-@@ -1775,13 +1809,13 @@ void x86emuOp2_btX_I(u8 X86EMU_UNUSED(op
+@@ -1775,13 +1829,13 @@
              mask = (0x1 << bit);
              CONDITIONAL_SET_FLAG(srcval & mask,F_CF);
              switch (rh) {
@@ -3222,7 +3254,7 @@
                  store_data_long(srcoffset, srcval ^ mask);
                  break;
              default:
-@@ -1800,13 +1834,13 @@ void x86emuOp2_btX_I(u8 X86EMU_UNUSED(op
+@@ -1800,13 +1854,13 @@
              mask = (0x1 << bit);
              CONDITIONAL_SET_FLAG(srcval & mask,F_CF);
              switch (rh) {
@@ -3239,7 +3271,7 @@
                  store_data_word(srcoffset, srcval ^ mask);
                  break;
              default:
-@@ -1828,13 +1862,13 @@ void x86emuOp2_btX_I(u8 X86EMU_UNUSED(op
+@@ -1828,13 +1882,13 @@
              mask = (0x1 << bit);
              CONDITIONAL_SET_FLAG(srcval & mask,F_CF);
              switch (rh) {
@@ -3256,7 +3288,7 @@
                  store_data_long(srcoffset, srcval ^ mask);
                  break;
              default:
-@@ -1853,13 +1887,13 @@ void x86emuOp2_btX_I(u8 X86EMU_UNUSED(op
+@@ -1853,13 +1907,13 @@
              mask = (0x1 << bit);
              CONDITIONAL_SET_FLAG(srcval & mask,F_CF);
              switch (rh) {
@@ -3273,7 +3305,7 @@
                  store_data_word(srcoffset, srcval ^ mask);
                  break;
              default:
-@@ -1881,13 +1915,13 @@ void x86emuOp2_btX_I(u8 X86EMU_UNUSED(op
+@@ -1881,13 +1935,13 @@
              mask = (0x1 << bit);
              CONDITIONAL_SET_FLAG(srcval & mask,F_CF);
              switch (rh) {
@@ -3290,7 +3322,7 @@
                  store_data_long(srcoffset, srcval ^ mask);
                  break;
              default:
-@@ -1906,13 +1940,13 @@ void x86emuOp2_btX_I(u8 X86EMU_UNUSED(op
+@@ -1906,13 +1960,13 @@
              mask = (0x1 << bit);
              CONDITIONAL_SET_FLAG(srcval & mask,F_CF);
              switch (rh) {
@@ -3307,7 +3339,7 @@
                  store_data_word(srcoffset, srcval ^ mask);
                  break;
              default:
-@@ -1934,13 +1968,13 @@ void x86emuOp2_btX_I(u8 X86EMU_UNUSED(op
+@@ -1934,13 +1988,13 @@
              mask = (0x1 << bit);
              CONDITIONAL_SET_FLAG(*srcreg & mask,F_CF);
              switch (rh) {
@@ -3324,7 +3356,7 @@
                  *srcreg ^= mask;
                  break;
              default:
-@@ -1959,13 +1993,13 @@ void x86emuOp2_btX_I(u8 X86EMU_UNUSED(op
+@@ -1959,13 +2013,13 @@
              mask = (0x1 << bit);
              CONDITIONAL_SET_FLAG(*srcreg & mask,F_CF);
              switch (rh) {
@@ -3341,7 +3373,7 @@
                  *srcreg ^= mask;
                  break;
              default:
-@@ -1982,7 +2016,7 @@ void x86emuOp2_btX_I(u8 X86EMU_UNUSED(op
+@@ -1982,7 +2036,7 @@
  REMARKS:
  Handles opcode 0x0f,0xbb
  ****************************************************************************/
@@ -3350,7 +3382,7 @@
  {
      int mod, rl, rh;
      uint srcoffset;
-@@ -2121,7 +2155,7 @@ void x86emuOp2_btc_R(u8 X86EMU_UNUSED(op
+@@ -2121,13 +2175,13 @@
  REMARKS:
  Handles opcode 0x0f,0xbc
  ****************************************************************************/
@@ -3359,7 +3391,14 @@
  {
      int mod, rl, rh;
      uint srcoffset;
-@@ -2207,25 +2241,25 @@ void x86emuOp2_bsf(u8 X86EMU_UNUSED(op2)
+ 
+     START_OF_INSTR();
+-    DECODE_PRINTF("BSF\n");
++    DECODE_PRINTF("BSF\t");
+     FETCH_DECODE_MODRM(mod, rh, rl);
+     switch(mod) {
+     case 0:
+@@ -2207,25 +2261,25 @@
  	break;
      case 3:				/* register to register */
  	if (M.x86.mode & SYSMODE_PREFIX_DATA) {
@@ -3393,7 +3432,7 @@
  	}
  	break;
      }
-@@ -2237,13 +2271,13 @@ void x86emuOp2_bsf(u8 X86EMU_UNUSED(op2)
+@@ -2237,13 +2291,13 @@
  REMARKS:
  Handles opcode 0x0f,0xbd
  ****************************************************************************/
@@ -3409,7 +3448,7 @@
      FETCH_DECODE_MODRM(mod, rh, rl);
      switch(mod) {
      case 0:
-@@ -2323,25 +2357,25 @@ void x86emuOp2_bsr(u8 X86EMU_UNUSED(op2)
+@@ -2323,25 +2377,25 @@
  	break;
      case 3:				/* register to register */
  	if (M.x86.mode & SYSMODE_PREFIX_DATA) {
@@ -3443,7 +3482,7 @@
  	}
  	break;
      }
-@@ -2353,7 +2387,7 @@ void x86emuOp2_bsr(u8 X86EMU_UNUSED(op2)
+@@ -2353,7 +2407,7 @@
  REMARKS:
  Handles opcode 0x0f,0xbe
  ****************************************************************************/
@@ -3452,7 +3491,7 @@
  {
      int mod, rl, rh;
      uint srcoffset;
-@@ -2469,7 +2503,7 @@ void x86emuOp2_movsx_byte_R_RM(u8 X86EMU
+@@ -2469,7 +2523,7 @@
  REMARKS:
  Handles opcode 0x0f,0xbf
  ****************************************************************************/
@@ -3461,7 +3500,55 @@
  {
      int mod, rl, rh;
      uint srcoffset;
-@@ -2578,7 +2612,7 @@ void (*x86emu_optab2[256])(u8) =
+@@ -2521,6 +2575,47 @@
+     END_OF_INSTR();
+ }
+ 
++/* Handles opcodes 0xc8-0xcf */
++static void x86emuOp2_bswap(u8 X86EMU_UNUSED(op2))
++{
++    START_OF_INSTR();
++    DECODE_PRINTF("BSWAP\n");
++    TRACE_AND_STEP();
++
++    switch (op2) {
++	case 0xc8:
++	    M.x86.R_EAX = bswap_32(M.x86.R_EAX);
++	    break;
++	case 0xc9:
++	    M.x86.R_ECX = bswap_32(M.x86.R_ECX);
++	    break;
++	case 0xca:
++	    M.x86.R_EDX = bswap_32(M.x86.R_EDX);
++	    break;
++	case 0xcb:
++	    M.x86.R_EBX = bswap_32(M.x86.R_EBX);
++	    break;
++	case 0xcc:
++	    M.x86.R_ESP = bswap_32(M.x86.R_ESP);
++	    break;
++	case 0xcd:
++	    M.x86.R_EBP = bswap_32(M.x86.R_EBP);
++	    break;
++	case 0xce:
++	    M.x86.R_ESI = bswap_32(M.x86.R_ESI);
++	    break;
++	case 0xcf:
++	    M.x86.R_EDI = bswap_32(M.x86.R_EDI);
++	    break;
++	default:
++	    /* can't happen */
++	    break;
++    }
++
++    DECODE_CLEAR_SEGOVR();
++    END_OF_INSTR();
++}
++
+ /***************************************************************************
+  * Double byte operation code table:
+  **************************************************************************/
+@@ -2578,7 +2673,7 @@
  /*  0x2f */ x86emuOp2_illegal_op,
  
  /*  0x30 */ x86emuOp2_illegal_op,
@@ -3470,7 +3557,16 @@
  /*  0x32 */ x86emuOp2_illegal_op,
  /*  0x33 */ x86emuOp2_illegal_op,
  /*  0x34 */ x86emuOp2_illegal_op,
-@@ -2707,7 +2741,7 @@ void (*x86emu_optab2[256])(u8) =
+@@ -2698,7 +2793,7 @@
+ 
+ /*  0xa0 */ x86emuOp2_push_FS,
+ /*  0xa1 */ x86emuOp2_pop_FS,
+-/*  0xa2 */ x86emuOp2_illegal_op,
++/*  0xa2 */ x86emuOp2_cpuid,
+ /*  0xa3 */ x86emuOp2_bt_R,
+ /*  0xa4 */ x86emuOp2_shld_IMM,
+ /*  0xa5 */ x86emuOp2_shld_CL,
+@@ -2707,7 +2802,7 @@
  /*  0xa8 */ x86emuOp2_push_GS,
  /*  0xa9 */ x86emuOp2_pop_GS,
  /*  0xaa */ x86emuOp2_illegal_op,
@@ -3479,9 +3575,32 @@
  /*  0xac */ x86emuOp2_shrd_IMM,
  /*  0xad */ x86emuOp2_shrd_CL,
  /*  0xae */ x86emuOp2_illegal_op,
+@@ -2738,14 +2833,14 @@
+ /*  0xc5 */ x86emuOp2_illegal_op,
+ /*  0xc6 */ x86emuOp2_illegal_op,
+ /*  0xc7 */ x86emuOp2_illegal_op,
+-/*  0xc8 */ x86emuOp2_illegal_op,  /* TODO: bswap */
+-/*  0xc9 */ x86emuOp2_illegal_op,  /* TODO: bswap */
+-/*  0xca */ x86emuOp2_illegal_op,  /* TODO: bswap */
+-/*  0xcb */ x86emuOp2_illegal_op,  /* TODO: bswap */
+-/*  0xcc */ x86emuOp2_illegal_op,  /* TODO: bswap */
+-/*  0xcd */ x86emuOp2_illegal_op,  /* TODO: bswap */
+-/*  0xce */ x86emuOp2_illegal_op,  /* TODO: bswap */
+-/*  0xcf */ x86emuOp2_illegal_op,  /* TODO: bswap */
++/*  0xc8 */ x86emuOp2_bswap,
++/*  0xc9 */ x86emuOp2_bswap,
++/*  0xca */ x86emuOp2_bswap,
++/*  0xcb */ x86emuOp2_bswap,
++/*  0xcc */ x86emuOp2_bswap,
++/*  0xcd */ x86emuOp2_bswap,
++/*  0xce */ x86emuOp2_bswap,
++/*  0xcf */ x86emuOp2_bswap,
+ 
+ /*  0xd0 */ x86emuOp2_illegal_op,
+ /*  0xd1 */ x86emuOp2_illegal_op,
 --- x86emu-0.8/scitech/src/x86emu/prim_ops.c.orig	2001-08-14 19:35:06.000000000 +0200
-+++ x86emu-0.8/scitech/src/x86emu/prim_ops.c	2008-01-26 20:44:41.713278260 +0100
-@@ -97,13 +97,13 @@
++++ x86emu-0.8/scitech/src/x86emu/prim_ops.c	2008-07-30 19:06:43.545332179 +0200
+@@ -97,12 +97,18 @@
  *
  ****************************************************************************/
  
@@ -3490,14 +3609,19 @@
  #define	PRIM_OPS_NO_REDEFINE_ASM
  #include "x86emu/x86emui.h"
  
- /*------------------------- Global Variables ------------------------------*/
+-/*------------------------- Global Variables ------------------------------*/
++#if defined(__GNUC__)
++# if defined (__i386__) || defined(__i386) || defined(__AMD64__) || defined(__x86_64__) || defined(__amd64__)
++#  include "x86emu/prim_x86_gcc.h"
++# endif
++#endif
  
 -#ifndef	__HAVE_INLINE_ASSEMBLER__
--
++/*------------------------- Global Variables ------------------------------*/
+ 
  static u32 x86emu_parity_tab[8] =
  {
- 	0x96696996,
-@@ -116,15 +116,11 @@ static u32 x86emu_parity_tab[8] =
+@@ -116,15 +122,11 @@
  	0x69969669,
  };
  
@@ -3513,7 +3637,7 @@
  /****************************************************************************
  REMARKS:
  Implements the AAA instruction and side effects.
-@@ -2086,7 +2082,7 @@ Implements the IMUL instruction and side
+@@ -2086,7 +2088,7 @@
  void imul_long_direct(u32 *res_lo, u32* res_hi,u32 d, u32 s)
  {
  #ifdef	__HAS_LONG_LONG__
@@ -3522,7 +3646,7 @@
  
  	*res_lo = (u32)res;
  	*res_hi = (u32)(res >> 32);
-@@ -2178,7 +2174,7 @@ Implements the MUL instruction and side 
+@@ -2178,7 +2180,7 @@
  void mul_long(u32 s)
  {
  #ifdef	__HAS_LONG_LONG__
@@ -3531,7 +3655,7 @@
  
  	M.x86.R_EAX = (u32)res;
  	M.x86.R_EDX = (u32)(res >> 32);
-@@ -2454,8 +2450,6 @@ void div_long(u32 s)
+@@ -2454,8 +2456,6 @@
  	M.x86.R_EDX = (u32)mod;
  }
  
@@ -3540,11 +3664,71 @@
  /****************************************************************************
  REMARKS:
  Implements the IN string instruction and side effects.
-@@ -2660,7 +2654,7 @@ DB(	if (CHECK_SP_ACCESS())
+@@ -2660,7 +2660,67 @@
      return res;
  }
  
 -#ifdef	__HAVE_INLINE_ASSEMBLER__
++/****************************************************************************
++REMARKS:
++CPUID takes EAX/ECX as inputs, writes EAX/EBX/ECX/EDX as output
++****************************************************************************/
++void cpuid (void)
++{
++    u32 feature = M.x86.R_EAX;
++
++#ifdef X86EMU_HAS_HW_CPUID
++    /* If the platform allows it, we will base our values on the real
++     * results from the CPUID instruction.  We limit support to the
++     * first two features, and the results of those are sanitized.
++     */
++    if (feature <= 1)
++	hw_cpuid(&M.x86.R_EAX, &M.x86.R_EBX, &M.x86.R_ECX, &M.x86.R_EDX);
++#endif
++
++    switch (feature) {
++    case 0:
++        /* Regardless if we have real data from the hardware, the emulator
++	 * will only support upto feature 1, which we set in register EAX.
++	 * Registers EBX:EDX:ECX contain a string identifying the CPU.
++	 */
++        M.x86.R_EAX = 1;
++#ifndef X86EMU_HAS_HW_CPUID
++        /* EBX:EDX:ECX = "GenuineIntel" */
++        M.x86.R_EBX = 0x756e6547;
++        M.x86.R_EDX = 0x49656e69;
++        M.x86.R_ECX = 0x6c65746e;
++#endif
++        break;
++    case 1:
++#ifndef X86EMU_HAS_HW_CPUID
++        /* If we don't have x86 compatible hardware, we return values from an
++	 * Intel 486dx4; which was one of the first processors to have CPUID.
++	 */
++        M.x86.R_EAX = 0x00000480;
++        M.x86.R_EBX = 0x00000000;
++        M.x86.R_ECX = 0x00000000;
++        M.x86.R_EDX = 0x00000002;	/* VME */
++#else
++        /* In the case that we have hardware CPUID instruction, we make sure
++	 * that the features reported are limited to TSC and VME.
++	 */
++        M.x86.R_EDX &= 0x00000012;
++#endif
++        break;
++    default:
++        /* Finally, we don't support any additional features.  Most CPUs
++	 * return all zeros when queried for invalid or unsupported feature
++	 * numbers.
++	 */
++        M.x86.R_EAX = 0;
++        M.x86.R_EBX = 0;
++        M.x86.R_ECX = 0;
++        M.x86.R_EDX = 0;
++        break;
++    }
++}
++
 +#if 0
  
  u16 aaa_word (u16 d)
@@ -3651,3 +3835,85 @@
  
  #ifdef  __cplusplus
  }                       			/* End of "C" linkage for C++   	*/
+--- x86emu-0.8/scitech/src/x86emu/x86emu/prim_x86_gcc.h.orig	1970-01-01 01:00:00.000000000 +0100
++++ x86emu-0.8/scitech/src/x86emu/x86emu/prim_x86_gcc.h	2008-07-30 19:07:39.965332179 +0200
+@@ -0,0 +1,79 @@
++/****************************************************************************
++*
++* Inline helpers for x86emu
++*
++* Copyright (C) 2008 Bart Trojanowski, Symbio Technologies, LLC
++*
++*  ========================================================================
++*
++*  Permission to use, copy, modify, distribute, and sell this software and
++*  its documentation for any purpose is hereby granted without fee,
++*  provided that the above copyright notice appear in all copies and that
++*  both that copyright notice and this permission notice appear in
++*  supporting documentation, and that the name of the authors not be used
++*  in advertising or publicity pertaining to distribution of the software
++*  without specific, written prior permission.  The authors makes no
++*  representations about the suitability of this software for any purpose.
++*  It is provided "as is" without express or implied warranty.
++*
++*  THE AUTHORS DISCLAIMS ALL WARRANTIES WITH REGARD TO THIS SOFTWARE,
++*  INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS, IN NO
++*  EVENT SHALL THE AUTHORS BE LIABLE FOR ANY SPECIAL, INDIRECT OR
++*  CONSEQUENTIAL DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF
++*  USE, DATA OR PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR
++*  OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
++*  PERFORMANCE OF THIS SOFTWARE.
++*
++*  ========================================================================
++*
++* Language:     GNU C
++* Environment:  GCC on i386 or x86-64
++* Developer:    Bart Trojanowski
++*
++* Description:  This file defines a few x86 macros that can be used by the
++*               emulator to execute native instructions.
++*
++*               For PIC vs non-PIC code refer to:
++*               http://sam.zoy.org/blog/2007-04-13-shlib-with-non-pic-code-have-inline-assembly-and-pic-mix-well
++*
++****************************************************************************/
++#ifndef __X86EMU_PRIM_X86_GCC_H
++#define __X86EMU_PRIM_X86_GCC_H
++
++#include "x86emu/types.h"
++
++#if !defined(__GNUC__) || !(defined (__i386__) || defined(__i386) || defined(__AMD64__) || defined(__x86_64__) || defined(__amd64__))
++#error This file is intended to be used by gcc on i386 or x86-64 system
++#endif
++
++#if defined(__PIC__) && defined(__i386__)
++
++#define X86EMU_HAS_HW_CPUID 1
++static inline void hw_cpuid (u32 *a, u32 *b, u32 *c, u32 *d)
++{
++    __asm__ __volatile__ ("pushl %%ebx      \n\t"
++                          "cpuid            \n\t"
++                          "movl %%ebx, %1   \n\t"
++                          "popl %%ebx       \n\t"
++                          : "=a" (*a), "=r" (*b),
++                            "=c" (*c), "=d" (*d)
++                          : "a" (*a), "c" (*c)
++                          : "cc");
++}
++
++#else // ! (__PIC__ && __i386__)
++
++#define x86EMU_HAS_HW_CPUID 1
++static inline void hw_cpuid (u32 *a, u32 *b, u32 *c, u32 *d)
++{
++    __asm__ __volatile__ ("cpuid"
++                          : "=a" (*a), "=b" (*b),
++                            "=c" (*c), "=d" (*d)
++                          : "a" (*a), "c" (*c)
++                          : "cc");
++}
++
++#endif // __PIC__ && __i386__
++
++
++#endif // __X86EMU_PRIM_X86_GCC_H
