@@ -1,0 +1,102 @@
+--- x86emu-0.8/scitech/src/x86emu/ops2.c.orig	2008-07-30 19:12:27.841341000 +0200
++++ x86emu-0.8/scitech/src/x86emu/ops2.c	2008-07-30 19:20:43.845332179 +0200
+@@ -58,11 +58,13 @@
+ static void x86emuOp2_illegal_op(
+ 	u8 op2)
+ {
++	int mod, rl, rh;
+ 	START_OF_INSTR();
++	FETCH_DECODE_MODRM(mod, rh, rl);
+ 	DECODE_PRINTF("ILLEGAL EXTENDED X86 OPCODE\n");
+ 	TRACE_REGS();
+-	printk("%04x:%04x: %02X ILLEGAL EXTENDED X86 OPCODE!\n",
+-		M.x86.R_CS, M.x86.R_IP-2,op2);
++	printk("%04x:%04x: %02X /%d ILLEGAL EXTENDED X86 OPCODE! (mod=%d rl=%d)\n",
++		M.x86.R_CS, M.x86.R_IP-2,op2, rh, mod, rl);
+     HALT_SYS();
+     END_OF_INSTR();
+ }
+@@ -71,6 +73,52 @@
+ 
+ /****************************************************************************
+ REMARKS:
++Handles opcode 0x0f,0x01
++****************************************************************************/
++static void x86emuOp2_group_g(u8 X86EMU_UNUSED(op2))
++{
++	int mod, rl, rh;
++	u16 *destreg;
++	uint destoffset;
++
++	START_OF_INSTR();
++	FETCH_DECODE_MODRM(mod, rh, rl);
++	switch (rh) {
++		case 4: // SMSW (Store Machine Status Word)
++			// Decode the mod byte to find the addressing
++			// Always returns 0x10 (initial value as per intel manual volume 3, figure 8-1
++			switch (mod) {
++				case 0:
++					destoffset = decode_rm00_address(rl);
++					store_data_word(destoffset, 0x10);
++					break;
++				case 1:
++					destoffset = decode_rm01_address(rl);
++					store_data_word(destoffset, 0x10);
++					break;
++				case 2:
++					destoffset = decode_rm10_address(rl);
++					store_data_word(destoffset, 0x10);
++					break;
++				case 3:
++					destreg = DECODE_RM_WORD_REGISTER(rl);
++					*destreg = 0x10;
++					break;
++			}
++			break;
++		default:
++			DECODE_PRINTF("ILLEGAL EXTENDED X86 OPCODE IN 0F 01\n");
++			TRACE_REGS();
++			printk("%04x:%04x: 0F %02X /%d ILLEGAL EXTENDED X86 OPCODE! (mod=%d rl=%d)\n",
++				M.x86.R_CS, M.x86.R_IP-2,op2, rh, mod, rl);
++			HALT_SYS();
++			break;
++	}
++	END_OF_INSTR();
++}
++
++/****************************************************************************
++REMARKS:
+ Handles opcode 0x0f,0x31
+ ****************************************************************************/
+ static void x86emuOp2_rdtsc(u8 X86EMU_UNUSED(op2))
+@@ -2622,7 +2670,7 @@
+ void (*x86emu_optab2[256])(u8) =
+ {
+ /*  0x00 */ x86emuOp2_illegal_op,  /* Group F (ring 0 PM)      */
+-/*  0x01 */ x86emuOp2_illegal_op,  /* Group G (ring 0 PM)      */
++/*  0x01 */ x86emuOp2_group_g,     /* Group G (ring 0 PM)      */
+ /*  0x02 */ x86emuOp2_illegal_op,  /* lar (ring 0 PM)          */
+ /*  0x03 */ x86emuOp2_illegal_op,  /* lsl (ring 0 PM)          */
+ /*  0x04 */ x86emuOp2_illegal_op,
+--- x86emu-0.8/scitech/src/x86emu/prim_ops.c.orig	2008-07-30 19:25:08.049339000 +0200
++++ x86emu-0.8/scitech/src/x86emu/prim_ops.c	2008-07-30 19:25:18.393339722 +0200
+@@ -2493,8 +2493,8 @@
+ 				store_data_long_abs(M.x86.R_ES, M.x86.R_DI,
+ 									(*sys_inl)(M.x86.R_DX));
+ 				M.x86.R_DI += inc;
+-                break;
+             }
++            break;
+         }
+ 		M.x86.R_CX = 0;
+ 		if (M.x86.mode & SYSMODE_PREFIX_DATA) {
+@@ -2557,8 +2557,8 @@
+ 				(*sys_outl)(M.x86.R_DX,
+ 						 fetch_data_long_abs(M.x86.R_ES, M.x86.R_SI));
+ 				M.x86.R_SI += inc;
+-                break;
+             }
++            break;
+         }
+ 		M.x86.R_CX = 0;
+ 		if (M.x86.mode & SYSMODE_PREFIX_DATA) {
