@@ -2,7 +2,7 @@ Summary:	Intel x86 CPU real mode emulator
 Summary(pl.UTF-8):	Emulator trybu rzeczywistego procesorów Intel x86
 Name:		x86emu
 Version:	0.8
-Release:	1.2
+Release:	2
 License:	MIT
 Group:		Libraries
 Source0:	http://www.scitechsoft.com/ftp/devel/obsolete/x86emu/%{name}-%{version}.tar.gz
