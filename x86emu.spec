@@ -1,7 +1,7 @@
 #
 # Conditional build:
 %bcond_with	klibc	# use klibc for initramfs purposes
-
+#
 Summary:	Intel x86 CPU real mode emulator
 Summary(pl.UTF-8):	Emulator trybu rzeczywistego procesorów Intel x86
 Name:		x86emu
@@ -16,8 +16,13 @@ Patch1:		%{name}-update.patch
 Patch2:		%{name}-update-v86d.patch
 Patch3:		%{name}-klibc-makefile.patch
 URL:		http://www.scitechsoft.com/products/dev/x86_emulator.html
+%{?with_klibc:BuildRequires:	klibc-devel}
 BuildRoot:	%{tmpdir}/%{name}-%{version}-root-%(id -u -n)
 
+%if %{with klibc}
+%define		_libdir		%{_prefix}/%{_lib}/klibc
+%define		_includedir	%{_prefix}/include/klibc
+%endif
 
 %description
 The SciTech x86emu is an emulator for executing Intel x86 real mode
@@ -47,7 +52,7 @@ Summary:	Header files and static x86emu library
 Summary(pl.UTF-8):	Pliki nagłówkowe i biblioteka statyczna x86emu
 Group:		Development/Libraries
 %if %{with klibc}
-Provides:	%{name}-devel(klibc)
+Provides:	%{name}-devel(klibc) = %{version}-%{release}
 %endif
 
 %description devel
@@ -83,11 +88,11 @@ Pliki nagłówkowe i biblioteka statyczna x86emu.
 
 %install
 rm -rf $RPM_BUILD_ROOT
-install -d $RPM_BUILD_ROOT{%{_libdir}%{?with_klibc:/klibc},%{_includedir}%{?with_klibc:/klibc}}
+install -d $RPM_BUILD_ROOT{%{_libdir},%{_includedir}}
 
-install scitech/src/x86emu/libx86emu*.a $RPM_BUILD_ROOT%{_libdir}%{?with_klibc:/klibc}
-install scitech/include/x86emu.h $RPM_BUILD_ROOT%{_includedir}%{?with_klibc:/klibc}/x86emu.h
-cp -a scitech/include/x86emu $RPM_BUILD_ROOT%{_includedir}%{?with_klibc:/klibc}/x86emu
+install scitech/src/x86emu/libx86emu*.a $RPM_BUILD_ROOT%{_libdir}
+install scitech/include/x86emu.h $RPM_BUILD_ROOT%{_includedir}/x86emu.h
+cp -a scitech/include/x86emu $RPM_BUILD_ROOT%{_includedir}/x86emu
 
 %clean
 rm -rf $RPM_BUILD_ROOT
@@ -97,7 +102,7 @@ rm -rf $RPM_BUILD_ROOT
 %files devel
 %defattr(644,root,root,755)
 %doc scitech/src/x86emu/LICENSE
-%{_libdir}%{?with_klibc:/klibc}/libx86emu.a
+%{_libdir}/libx86emu.a
 %{!?with_klibc:%{_libdir}/libx86emud.a}
-%{_includedir}%{?with_klibc:/klibc}/x86emu.h
-%{_includedir}%{?with_klibc:/klibc}/x86emu
+%{_includedir}/x86emu.h
+%{_includedir}/x86emu
