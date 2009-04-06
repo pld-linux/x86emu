@@ -20,7 +20,7 @@ URL:		http://www.scitechsoft.com/products/dev/x86_emulator.html
 BuildRoot:	%{tmpdir}/%{name}-%{version}-root-%(id -u -n)
 
 %if %{with klibc}
-%define		_klibdir		%{_prefix}/%{_lib}/klibc
+%define		_klibdir	%{_prefix}/%{_lib}/klibc
 %define		_kincludedir	%{_prefix}/include/klibc
 %endif
 
