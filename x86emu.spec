@@ -1,3 +1,4 @@
+# NOTE: for newer versions (>=1) of libx86emu library see libx86emu.spec
 #
 # Conditional build:
 %bcond_without	klibc	# use klibc for initrd/initramfs purposes
